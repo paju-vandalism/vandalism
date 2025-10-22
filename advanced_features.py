@@ -127,10 +127,10 @@ class ClusterDetector:
                     if label not in clusters:
                         clusters[label] = []
                     clusters[label].append({
-                        'report_id': report_data[i]['id'],
-                        'damage_type': report_data[i]['damage_type'],
-                        'urgency_level': report_data[i]['urgency_level'],
-                        'coordinates': coordinates[i]
+                        'report_id': int(report_data[i]['id']),
+                        'damage_type': str(report_data[i]['damage_type']),
+                        'urgency_level': int(report_data[i]['urgency_level']),
+                        'coordinates': [float(coordinates[i][0]), float(coordinates[i][1])]
                     })
             
             # 군집 정보 반환
@@ -145,11 +145,11 @@ class ClusterDetector:
                     max_urgency = max([r['urgency_level'] for r in reports])
                     
                     cluster_info.append({
-                        'cluster_id': cluster_id,
+                        'cluster_id': int(cluster_id),
                         'report_count': len(reports),
-                        'center_latitude': center_lat,
-                        'center_longitude': center_lon,
-                        'max_urgency': max_urgency,
+                        'center_latitude': float(center_lat),
+                        'center_longitude': float(center_lon),
+                        'max_urgency': int(max_urgency),
                         'reports': reports
                     })
             

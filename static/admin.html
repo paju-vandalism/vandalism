@@ -613,10 +613,10 @@
                 for (let i = 1; i <= 5; i++) {
                     const count = stats.urgency_distribution[i] || 0;
                     const percentage = stats.total_reports > 0 ? (count / stats.total_reports * 100).toFixed(1) : 0;
-                    chartHtml += `<div style="margin: 8px 0; display: flex; justify-content: space-between;">`;
-                    chartHtml += `<span>${urgencyLabels[i-1]}</span>`;
-                    chartHtml += `<span><span class="urgency-badge urgency-${i}">${count}</span> (${percentage}%)</span>`;
-                    chartHtml += `</div>`;
+                    chartHtml += '<div style="margin: 8px 0; display: flex; justify-content: space-between;">';
+                    chartHtml += '<span>' + urgencyLabels[i-1] + '</span>';
+                    chartHtml += '<span><span class="urgency-badge urgency-' + i + '">' + count + '</span> (' + percentage + '%)</span>';
+                    chartHtml += '</div>';
                 }
                 chartHtml += '</div>';
                 
@@ -625,10 +625,10 @@
                 chartHtml += '<h4 style="margin-bottom: 15px; color: #667eea;">손상 유형별 분포</h4>';
                 for (const [damageType, count] of Object.entries(stats.damage_type_distribution)) {
                     const percentage = stats.total_reports > 0 ? (count / stats.total_reports * 100).toFixed(1) : 0;
-                    chartHtml += `<div style="margin: 8px 0; display: flex; justify-content: space-between;">`;
-                    chartHtml += `<span>${damageType}</span>`;
-                    chartHtml += `<span>${count} (${percentage}%)</span>`;
-                    chartHtml += `</div>`;
+                    chartHtml += '<div style="margin: 8px 0; display: flex; justify-content: space-between;">';
+                    chartHtml += '<span>' + damageType + '</span>';
+                    chartHtml += '<span>' + count + ' (' + percentage + '%)</span>';
+                    chartHtml += '</div>';
                 }
                 chartHtml += '</div>';
                 
@@ -659,12 +659,12 @@
                     }[report.status] || report.status;
                     
                     tableHtml += '<tr>';
-                    tableHtml += `<td>#${report.id}</td>`;
-                    tableHtml += `<td>${report.damage_type}</td>`;
-                    tableHtml += `<td><span class="urgency-badge urgency-${report.urgency_level}">${urgencyText}</span></td>`;
-                    tableHtml += `<td><span class="status-badge status-${report.status.toLowerCase()}">${statusText}</span></td>`;
-                    tableHtml += `<td>${new Date(report.created_at).toLocaleString()}</td>`;
-                    tableHtml += `<td><button class="btn btn-primary" onclick="showReportDetail(${report.id})" style="padding: 5px 10px; font-size: 12px;">상세보기</button></td>`;
+                    tableHtml += '<td>#' + report.id + '</td>';
+                    tableHtml += '<td>' + report.damage_type + '</td>';
+                    tableHtml += '<td><span class="urgency-badge urgency-' + report.urgency_level + '">' + urgencyText + '</span></td>';
+                    tableHtml += '<td><span class="status-badge status-' + report.status.toLowerCase() + '">' + statusText + '</span></td>';
+                    tableHtml += '<td>' + new Date(report.created_at).toLocaleString() + '</td>';
+                    tableHtml += '<td><button class="btn btn-primary" onclick="showReportDetail(' + report.id + ')" style="padding: 5px 10px; font-size: 12px;">상세보기</button></td>';
                     tableHtml += '</tr>';
                 });
                 
@@ -683,9 +683,9 @@
                 let clusterHtml = '';
                 clusters.forEach(cluster => {
                     clusterHtml += '<div class="cluster-info">';
-                    clusterHtml += `<h4>군집 ${cluster.cluster_id} (${cluster.report_count}건)</h4>`;
-                    clusterHtml += `<p><strong>위치:</strong> 위도 ${cluster.center_latitude.toFixed(6)}, 경도 ${cluster.center_longitude.toFixed(6)}</p>`;
-                    clusterHtml += `<p><strong>최고 긴급도:</strong> <span class="urgency-badge urgency-${cluster.max_urgency}">${['낮음', '보통', '높음', '매우높음', '긴급'][cluster.max_urgency - 1]}</span></p>`;
+                    clusterHtml += '<h4>군집 ' + cluster.cluster_id + ' (' + cluster.report_count + '건)</h4>';
+                    clusterHtml += '<p><strong>위치:</strong> 위도 ' + cluster.center_latitude.toFixed(6) + ', 경도 ' + cluster.center_longitude.toFixed(6) + '</p>';
+                    clusterHtml += '<p><strong>최고 긴급도:</strong> <span class="urgency-badge urgency-' + cluster.max_urgency + '">' + ['낮음', '보통', '높음', '매우높음', '긴급'][cluster.max_urgency - 1] + '</span></p>';
                     
                     if (cluster.max_urgency >= 4) {
                         clusterHtml += '<div class="emergency-alert">⚠️ 긴급 처리가 필요한 군집입니다!</div>';
@@ -834,23 +834,21 @@
 
                 const marker = L.marker([lat, lon], { icon: icon }).addTo(this.map);
 
-                const popupContent = `
-                    <div style="font-family: Arial; width: 200px;">
-                        <h4 style="margin: 0; color: ${urgency >= 4 ? '#FF6347' : urgency >= 3 ? '#FFA500' : '#808080'};">
-                            🚨 신고 ID: ${report.id}
-                        </h4>
-                        <hr style="margin: 5px 0;">
-                        <b>위험도:</b> ${isInCluster ? `Level ${urgency}` : `단독 (긴급도 ${urgency})`}<br>
-                        <b>위험도 점수:</b> ${report.risk_score || urgency}<br>
-                        <b>긴급도:</b> ${urgency}<br>
-                        <b>군집 ID:</b> ${report.cluster_id || '단독'}<br>
-                        <b>시간:</b> ${new Date(report.created_at).toLocaleString()}<br>
-                        <b>위치:</b> (${lat.toFixed(5)}, ${lon.toFixed(5)})
-                    </div>
-                `;
+                const popupContent = '<div style="font-family: Arial; width: 200px;">' +
+                    '<h4 style="margin: 0; color: ' + (urgency >= 4 ? '#FF6347' : urgency >= 3 ? '#FFA500' : '#808080') + ';">' +
+                    '🚨 신고 ID: ' + report.id +
+                    '</h4>' +
+                    '<hr style="margin: 5px 0;">' +
+                    '<b>위험도:</b> ' + (isInCluster ? 'Level ' + urgency : '단독 (긴급도 ' + urgency + ')') + '<br>' +
+                    '<b>위험도 점수:</b> ' + (report.risk_score || urgency) + '<br>' +
+                    '<b>긴급도:</b> ' + urgency + '<br>' +
+                    '<b>군집 ID:</b> ' + (report.cluster_id || '단독') + '<br>' +
+                    '<b>시간:</b> ' + new Date(report.created_at).toLocaleString() + '<br>' +
+                    '<b>위치:</b> (' + lat.toFixed(5) + ', ' + lon.toFixed(5) + ')' +
+                    '</div>';
 
                 marker.bindPopup(popupContent);
-                marker.bindTooltip(`신고 ${report.id} - ${isInCluster ? `Level ${urgency}` : `단독 (긴급도 ${urgency})`}`);
+                marker.bindTooltip('신고 ' + report.id + ' - ' + (isInCluster ? 'Level ' + urgency : '단독 (긴급도 ' + urgency + ')'));
             }
 
             addClusterMarker(lat, lon, cluster, clusterId) {
@@ -870,29 +868,27 @@
                     weight: 3
                 }).addTo(this.map);
 
-                circle.bindPopup(`군집 ${clusterId}<br>위험도: Level ${urgency}<br>신고: ${cluster.reports.length}건`);
-                circle.bindTooltip(`군집 ${clusterId} - ${cluster.reports.length}건`);
+                circle.bindPopup('군집 ' + clusterId + '<br>위험도: Level ' + urgency + '<br>신고: ' + cluster.reports.length + '건');
+                circle.bindTooltip('군집 ' + clusterId + ' - ' + cluster.reports.length + '건');
 
                 // 군집 중심 마커
                 const clusterIcon = L.divIcon({
-                    html: `
-                        <div style="
-                            font-size: 16px; 
-                            font-weight: bold; 
-                            color: white; 
-                            background-color: ${color}; 
-                            border: 3px solid white;
-                            border-radius: 50%; 
-                            width: 40px; 
-                            height: 40px; 
-                            display: flex; 
-                            align-items: center; 
-                            justify-content: center;
-                            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-                        ">
-                            ${cluster.reports.length}
-                        </div>
-                    `,
+                    html: '<div style="' +
+                        'font-size: 16px; ' +
+                        'font-weight: bold; ' +
+                        'color: white; ' +
+                        'background-color: ' + color + '; ' +
+                        'border: 3px solid white;' +
+                        'border-radius: 50%; ' +
+                        'width: 40px; ' +
+                        'height: 40px; ' +
+                        'display: flex; ' +
+                        'align-items: center; ' +
+                        'justify-content: center;' +
+                        'box-shadow: 0 0 10px rgba(0,0,0,0.5);' +
+                        '">' +
+                        cluster.reports.length +
+                        '</div>',
                     className: 'empty'
                 });
 
@@ -915,7 +911,7 @@
             modalBody.innerHTML = '<div class="loading">신고 정보를 불러오는 중...</div>';
             
             try {
-                const response = await fetch(`/api/report/${reportId}/detail`);
+                const response = await fetch('/api/report/' + reportId + '/detail');
                 const report = await response.json();
                 
                 displayReportDetail(report);
