@@ -250,6 +250,170 @@
             font-size: 12px;
         }
 
+        /* 신고 상세보기 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detail-section h3 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            width: 120px;
+            color: #666;
+        }
+
+        .detail-value {
+            flex: 1;
+            color: #333;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .no-image {
+            padding: 40px;
+            text-align: center;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
@@ -348,6 +512,19 @@
                         <b>단독:</b> <span id="mapIndividualCount">-</span>건
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 신고 상세보기 모달 -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 신고 상세 정보</h2>
+                <button class="close" onclick="closeReportModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="reportModalBody">
+                <div class="loading">신고 정보를 불러오는 중...</div>
             </div>
         </div>
     </div>
@@ -469,7 +646,7 @@
                 
                 let tableHtml = '<table class="reports-table">';
                 tableHtml += '<thead><tr>';
-                tableHtml += '<th>신고번호</th><th>손상유형</th><th>긴급도</th><th>상태</th><th>신고시간</th>';
+                tableHtml += '<th>신고번호</th><th>손상유형</th><th>긴급도</th><th>상태</th><th>신고시간</th><th>관리</th>';
                 tableHtml += '</tr></thead><tbody>';
                 
                 reports.slice(0, 10).forEach(report => {
@@ -487,6 +664,7 @@
                     tableHtml += `<td><span class="urgency-badge urgency-${report.urgency_level}">${urgencyText}</span></td>`;
                     tableHtml += `<td><span class="status-badge status-${report.status.toLowerCase()}">${statusText}</span></td>`;
                     tableHtml += `<td>${new Date(report.created_at).toLocaleString()}</td>`;
+                    tableHtml += `<td><button class="btn btn-primary" onclick="showReportDetail(${report.id})" style="padding: 5px 10px; font-size: 12px;">상세보기</button></td>`;
                     tableHtml += '</tr>';
                 });
                 
@@ -725,6 +903,193 @@
         function refreshDashboard() {
             if (window.dashboard) {
                 window.dashboard.loadDashboard();
+            }
+        }
+
+        // 신고 상세보기 모달 관련 함수들
+        async function showReportDetail(reportId) {
+            const modal = document.getElementById('reportModal');
+            const modalBody = document.getElementById('reportModalBody');
+            
+            modal.style.display = 'block';
+            modalBody.innerHTML = '<div class="loading">신고 정보를 불러오는 중...</div>';
+            
+            try {
+                const response = await fetch(`/api/report/${reportId}/detail`);
+                const report = await response.json();
+                
+                displayReportDetail(report);
+            } catch (error) {
+                console.error('신고 상세 정보 로드 오류:', error);
+                modalBody.innerHTML = '<div class="loading">신고 정보를 불러오는데 실패했습니다.</div>';
+            }
+        }
+
+        function displayReportDetail(report) {
+            const modalBody = document.getElementById('reportModalBody');
+            
+            const urgencyText = ['낮음', '보통', '높음', '매우높음', '긴급'][report.urgency_level - 1];
+            const statusText = {
+                '접수': '접수완료',
+                '검토중': '검토중',
+                '처리중': '처리중',
+                '완료': '처리완료'
+            }[report.status] || report.status;
+            
+            let html = '';
+            
+            // 기본 정보 섹션
+            html += '<div class="detail-section">';
+            html += '<h3>📋 기본 정보</h3>';
+            html += '<div class="detail-row"><span class="detail-label">신고번호:</span><span class="detail-value">#' + report.id + '</span></div>';
+            html += '<div class="detail-row"><span class="detail-label">사용자ID:</span><span class="detail-value">' + report.user_id + '</span></div>';
+            html += '<div class="detail-row"><span class="detail-label">손상유형:</span><span class="detail-value">' + report.damage_type + '</span></div>';
+            html += '<div class="detail-row"><span class="detail-label">긴급도:</span><span class="detail-value"><span class="urgency-badge urgency-' + report.urgency_level + '">' + urgencyText + '</span></span></div>';
+            html += '<div class="detail-row"><span class="detail-label">상태:</span><span class="detail-value"><span class="status-badge status-' + report.status.toLowerCase() + '">' + statusText + '</span></span></div>';
+            html += '<div class="detail-row"><span class="detail-label">접수일:</span><span class="detail-value">' + new Date(report.created_at).toLocaleString('ko-KR') + '</span></div>';
+            html += '<div class="detail-row"><span class="detail-label">수정일:</span><span class="detail-value">' + new Date(report.updated_at).toLocaleString('ko-KR') + '</span></div>';
+            html += '</div>';
+            
+            // 위치 정보 섹션
+            if (report.location || (report.latitude && report.longitude)) {
+                html += '<div class="detail-section">';
+                html += '<h3>📍 위치 정보</h3>';
+                if (report.location) {
+                    html += '<div class="detail-row"><span class="detail-label">주소:</span><span class="detail-value">' + report.location + '</span></div>';
+                }
+                if (report.latitude && report.longitude) {
+                    html += '<div class="detail-row"><span class="detail-label">좌표:</span><span class="detail-value">위도 ' + report.latitude.toFixed(6) + ', 경도 ' + report.longitude.toFixed(6) + '</span></div>';
+                }
+                html += '</div>';
+            }
+            
+            // 담당 부서 정보 섹션
+            html += '<div class="detail-section">';
+            html += '<h3>🏢 담당 부서</h3>';
+            html += '<div class="detail-row"><span class="detail-label">부서명:</span><span class="detail-value">' + report.department + '</span></div>';
+            html += '<div class="detail-row"><span class="detail-label">연락처:</span><span class="detail-value">' + report.department_contact + '</span></div>';
+            html += '</div>';
+            
+            // 설명 섹션
+            if (report.description) {
+                html += '<div class="detail-section">';
+                html += '<h3>📝 상세 설명</h3>';
+                html += '<div class="detail-value">' + report.description + '</div>';
+                html += '</div>';
+            }
+            
+            // 이미지 섹션
+            if (report.image_path) {
+                html += '<div class="detail-section">';
+                html += '<h3>📸 첨부 이미지</h3>';
+                html += '<img src="/uploads/' + report.image_path + '" alt="신고 이미지" class="image-preview">';
+                html += '<div class="no-image" style="display:none;">이미지를 불러올 수 없습니다.</div>';
+                html += '</div>';
+            }
+            
+            // 액션 버튼들
+            html += '<div class="action-buttons">';
+            
+            // 상태 변경 버튼들
+            const statusButtons = {
+                '접수': ['검토중', '완료'],
+                '검토중': ['처리중', '완료'],
+                '처리중': ['완료'],
+                '완료': []
+            };
+            
+            const availableStatuses = statusButtons[report.status] || [];
+            availableStatuses.forEach(status => {
+                const buttonClass = status === '완료' ? 'btn-success' : 
+                                  status === '처리중' ? 'btn-warning' : 'btn-primary';
+                html += '<button class="btn ' + buttonClass + '" data-action="update" data-report-id="' + report.id + '" data-status="' + status + '">' + status + '로 변경</button>';
+            });
+            
+            html += '<button class="btn btn-danger" data-action="delete" data-report-id="' + report.id + '">신고 삭제</button>';
+            html += '<button class="btn btn-secondary" data-action="close">닫기</button>';
+            html += '</div>';
+            
+            modalBody.innerHTML = html;
+            
+            // 이벤트 리스너 추가
+            modalBody.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn')) {
+                    const action = e.target.getAttribute('data-action');
+                    const reportId = e.target.getAttribute('data-report-id');
+                    const status = e.target.getAttribute('data-status');
+                    
+                    if (action === 'update') {
+                        updateReportStatus(reportId, status);
+                    } else if (action === 'delete') {
+                        deleteReport(reportId);
+                    } else if (action === 'close') {
+                        closeReportModal();
+                    }
+                }
+            });
+        }
+
+        function closeReportModal() {
+            document.getElementById('reportModal').style.display = 'none';
+        }
+
+        async function updateReportStatus(reportId, newStatus) {
+            if (!confirm('신고 #' + reportId + '의 상태를 \'' + newStatus + '\'로 변경하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/report/' + reportId + '/status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newStatus)
+                });
+                
+                if (response.ok) {
+                    alert('신고 상태가 성공적으로 변경되었습니다.');
+                    closeReportModal();
+                    refreshDashboard(); // 대시보드 새로고침
+                } else {
+                    const error = await response.json();
+                    alert('상태 변경 실패: ' + error.detail);
+                }
+            } catch (error) {
+                console.error('상태 변경 오류:', error);
+                alert('상태 변경 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function deleteReport(reportId) {
+            if (!confirm('신고 #' + reportId + '를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/report/' + reportId, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('신고가 성공적으로 삭제되었습니다.');
+                    closeReportModal();
+                    refreshDashboard(); // 대시보드 새로고침
+                } else {
+                    const error = await response.json();
+                    alert('삭제 실패: ' + error.detail);
+                }
+            } catch (error) {
+                console.error('삭제 오류:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 모달 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('reportModal');
+            if (event.target === modal) {
+                closeReportModal();
             }
         }
 

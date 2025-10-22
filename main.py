@@ -690,6 +690,52 @@ async def get_report_status(report_id: int):
         logger.error(f"신고 상태 조회 오류: {e}")
         raise HTTPException(status_code=500, detail=f"신고 상태 조회 실패: {str(e)}")
 
+@app.get("/api/report/{report_id}/detail")
+async def get_report_detail(report_id: int):
+    """신고 상세 정보 조회 (관리자용)"""
+    try:
+        conn = sqlite3.connect('reports.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, user_id, image_path, location, latitude, longitude, 
+                   damage_type, urgency_level, description, status, 
+                   created_at, updated_at
+            FROM reports WHERE id = ?
+        ''', (report_id,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="신고를 찾을 수 없습니다.")
+        
+        report = {
+            "id": result[0],
+            "user_id": result[1],
+            "image_path": result[2],
+            "location": result[3],
+            "latitude": result[4],
+            "longitude": result[5],
+            "damage_type": result[6],
+            "urgency_level": result[7],
+            "description": result[8],
+            "status": result[9],
+            "created_at": result[10],
+            "updated_at": result[11]
+        }
+        
+        # 부서 정보 추가
+        dept_info = get_department(report["damage_type"])
+        report["department"] = dept_info["department"]
+        report["department_contact"] = dept_info["contact"]
+        
+        return report
+        
+    except Exception as e:
+        logger.error(f"신고 상세 조회 오류: {e}")
+        raise HTTPException(status_code=500, detail=f"신고 상세 조회 실패: {str(e)}")
+
 @app.get("/api/damage-types")
 async def get_damage_types():
     """손상 유형 목록 조회"""
