@@ -379,7 +379,8 @@
                 <div class="message-avatar">🤖</div>
                 <div class="message-content">
                     안녕하세요! 공공기물 파손 신고 챗봇입니다. 📸<br><br>
-                    파손된 시설물의 사진을 찍어서 보내주시면, AI가 자동으로 분석하여 적절한 부서에 연계해드립니다.
+                    파손된 시설물의 사진을 찍어서 보내주시면, AI가 자동으로 분석하여 적절한 부서에 연계해드립니다.<br><br>
+                    <button class="damage-type-btn" onclick="chatBot.showAllReportsOnMap()" style="background: #17a2b8; color: white;">🗺️ 전체 신고 위치 보기</button>
                 </div>
             </div>
         </div>
@@ -755,7 +756,8 @@
                             damage_type: this.selectedDamageType,
                             description: '이미지 기반 자동 신고',
                             latitude: this.currentLocation?.latitude,
-                            longitude: this.currentLocation?.longitude
+                            longitude: this.currentLocation?.longitude,
+                            location: this.currentLocation?.address
                         })
                     });
 
@@ -772,7 +774,8 @@
                         message += `🏢 <strong>담당부서:</strong> ${result.department}<br>`;
                         message += `⏰ <strong>처리예상시간:</strong> ${result.estimated_time}<br>`;
                         message += `🚨 <strong>긴급도:</strong> <span class="urgency-badge ${urgencyClass}">${urgencyText}</span><br><br>`;
-                        message += `처리 상황을 실시간으로 확인할 수 있습니다.`;
+                        message += `처리 상황을 실시간으로 확인할 수 있습니다.<br><br>`;
+                        message += `<button class="damage-type-btn" onclick="chatBot.showAllReportsOnMap()" style="background: #17a2b8; color: white;">🗺️ 지도에서 신고 위치 보기</button>`;
                         
                         this.addMessage(message);
                         
@@ -836,6 +839,149 @@
                 } else {
                     this.addMessage('사진을 업로드해주시면 더 정확한 도움을 드릴 수 있습니다. 📷');
                 }
+            }
+
+            async showAllReportsOnMap() {
+                try {
+                    // 모든 신고 데이터 가져오기
+                    const response = await fetch('/api/reports');
+                    const reports = await response.json();
+                    
+                    // 위치 정보가 있는 신고만 필터링
+                    const reportsWithLocation = reports.filter(report => 
+                        report.latitude && report.longitude
+                    );
+                    
+                    if (reportsWithLocation.length === 0) {
+                        this.addMessage('📍 위치 정보가 있는 신고가 없습니다.');
+                        return;
+                    }
+                    
+                    // 지도 모달 열기
+                    this.mapModal.classList.remove('hidden');
+                    this.mapModal.style.display = 'flex';
+                    
+                    // 지도 초기화를 약간 지연시켜 DOM이 완전히 렌더링된 후 실행
+                    setTimeout(() => {
+                        this.initReportsMap(reportsWithLocation);
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('신고 목록 조회 오류:', error);
+                    this.addMessage('❌ 신고 목록을 불러오는데 실패했습니다.');
+                }
+            }
+
+            initReportsMap(reports) {
+                try {
+                    // 기존 지도가 있으면 제거
+                    if (this.map) {
+                        this.map.remove();
+                    }
+
+                    console.log('신고 위치 지도 초기화 중...', reports);
+                    
+                    // 모든 신고의 중심점 계산
+                    const centerLat = reports.reduce((sum, report) => sum + report.latitude, 0) / reports.length;
+                    const centerLon = reports.reduce((sum, report) => sum + report.longitude, 0) / reports.length;
+                    
+                    // Leaflet 지도 초기화
+                    this.map = L.map('mapContent').setView([centerLat, centerLon], 13);
+                    
+                    // OpenStreetMap 타일 레이어 추가
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(this.map);
+                    
+                    // 신고별 마커 추가
+                    reports.forEach(report => {
+                        const markerColor = this.getMarkerColorByStatus(report.status);
+                        const markerIcon = L.divIcon({
+                            className: 'custom-marker',
+                            html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        });
+                        
+                        const marker = L.marker([report.latitude, report.longitude], {
+                            icon: markerIcon
+                        }).addTo(this.map);
+                        
+                        // 팝업 내용 생성
+                        const urgencyText = ['낮음', '보통', '높음', '매우높음', '긴급'][report.urgency_level - 1];
+                        const popupContent = `
+                            <div style="min-width: 200px;">
+                                <h4 style="margin: 0 0 8px 0; color: #333;">신고 #${report.id}</h4>
+                                <p style="margin: 4px 0;"><strong>손상유형:</strong> ${report.damage_type}</p>
+                                <p style="margin: 4px 0;"><strong>상태:</strong> ${report.status}</p>
+                                <p style="margin: 4px 0;"><strong>긴급도:</strong> ${urgencyText}</p>
+                                <p style="margin: 4px 0;"><strong>접수일:</strong> ${new Date(report.created_at).toLocaleDateString('ko-KR')}</p>
+                            </div>
+                        `;
+                        
+                        marker.bindPopup(popupContent);
+                    });
+                    
+                    // 범례 추가
+                    this.addMapLegend();
+                    
+                    this.updateLocationInfo(`총 ${reports.length}개의 신고 위치가 표시됩니다.`);
+                    console.log('신고 위치 지도 초기화 완료!');
+                    
+                } catch (error) {
+                    console.error('신고 지도 초기화 오류:', error);
+                    this.locationInfo.textContent = '지도 로드 실패: ' + error.message;
+                }
+            }
+
+            getMarkerColorByStatus(status) {
+                const statusColors = {
+                    '접수': '#28a745',      // 녹색
+                    '검토중': '#ffc107',    // 노란색
+                    '처리중': '#17a2b8',    // 파란색
+                    '완료': '#6c757d'       // 회색
+                };
+                return statusColors[status] || '#6c757d';
+            }
+
+            addMapLegend() {
+                const legend = L.control({position: 'bottomright'});
+                
+                legend.onAdd = function(map) {
+                    const div = L.DomUtil.create('div', 'map-legend');
+                    div.style.cssText = `
+                        background: white;
+                        padding: 10px;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        font-size: 12px;
+                        line-height: 1.4;
+                    `;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 5px;">신고 상태</div>
+                        <div style="display: flex; align-items: center; margin: 2px 0;">
+                            <div style="width: 12px; height: 12px; background-color: #28a745; border-radius: 50%; margin-right: 5px;"></div>
+                            접수
+                        </div>
+                        <div style="display: flex; align-items: center; margin: 2px 0;">
+                            <div style="width: 12px; height: 12px; background-color: #ffc107; border-radius: 50%; margin-right: 5px;"></div>
+                            검토중
+                        </div>
+                        <div style="display: flex; align-items: center; margin: 2px 0;">
+                            <div style="width: 12px; height: 12px; background-color: #17a2b8; border-radius: 50%; margin-right: 5px;"></div>
+                            처리중
+                        </div>
+                        <div style="display: flex; align-items: center; margin: 2px 0;">
+                            <div style="width: 12px; height: 12px; background-color: #6c757d; border-radius: 50%; margin-right: 5px;"></div>
+                            완료
+                        </div>
+                    `;
+                    
+                    return div;
+                };
+                
+                legend.addTo(this.map);
             }
 
             scrollToBottom() {

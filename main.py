@@ -92,6 +92,9 @@ class ReportRequest(BaseModel):
     user_id: str
     description: Optional[str] = None
     damage_type: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: Optional[str] = None
 
 class ReportResponse(BaseModel):
     report_id: int
@@ -483,7 +486,7 @@ async def get_reports(limit: int = 50, status: str = None):
         cursor = conn.cursor()
         
         query = '''
-            SELECT id, user_id, damage_type, urgency_level, status, created_at, updated_at
+            SELECT id, user_id, damage_type, urgency_level, status, created_at, updated_at, latitude, longitude, location
             FROM reports
         '''
         params = []
@@ -507,7 +510,10 @@ async def get_reports(limit: int = 50, status: str = None):
                 "urgency_level": report[3],
                 "status": report[4],
                 "created_at": report[5],
-                "updated_at": report[6]
+                "updated_at": report[6],
+                "latitude": report[7],
+                "longitude": report[8],
+                "location": report[9]
             }
             for report in reports
         ]
@@ -589,19 +595,18 @@ async def create_report(request: ReportRequest):
         # 부서 정보 조회
         dept_info = get_department(damage_type)
         
-        # 신고 데이터 삽입
+        # 위치 정보 추출
+        latitude = getattr(request, 'latitude', None)
+        longitude = getattr(request, 'longitude', None)
+        location = getattr(request, 'location', None)
+        
+        # 신고 데이터 삽입 (위치 정보 포함)
         cursor.execute('''
-            INSERT INTO reports (user_id, damage_type, description, urgency_level, status)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (request.user_id, damage_type, request.description, urgency_level, '접수'))
+            INSERT INTO reports (user_id, damage_type, description, urgency_level, status, latitude, longitude, location)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (request.user_id, damage_type, request.description, urgency_level, '접수', latitude, longitude, location))
         
         report_id = cursor.lastrowid
-        
-        # 위치 정보 업데이트 (이미지 분석에서 가져온 경우)
-        if hasattr(request, 'latitude') and hasattr(request, 'longitude'):
-            cursor.execute('''
-                UPDATE reports SET latitude = ?, longitude = ? WHERE id = ?
-            ''', (request.latitude, request.longitude, report_id))
         
         conn.commit()
         conn.close()
@@ -810,6 +815,58 @@ async def update_report_status(report_id: int, status: str):
     except Exception as e:
         logger.error(f"신고 상태 업데이트 오류: {e}")
         raise HTTPException(status_code=500, detail=f"신고 상태 업데이트 실패: {str(e)}")
+
+@app.delete("/api/report/{report_id}")
+async def delete_report(report_id: int):
+    """신고 삭제 (관리자용)"""
+    try:
+        conn = sqlite3.connect('reports.db')
+        cursor = conn.cursor()
+        
+        # 신고 존재 확인
+        cursor.execute('SELECT id FROM reports WHERE id = ?', (report_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="신고를 찾을 수 없습니다.")
+        
+        # 신고 삭제
+        cursor.execute('DELETE FROM reports WHERE id = ?', (report_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"message": f"신고 #{report_id}가 성공적으로 삭제되었습니다."}
+        
+    except Exception as e:
+        logger.error(f"신고 삭제 오류: {e}")
+        raise HTTPException(status_code=500, detail=f"신고 삭제 실패: {str(e)}")
+
+@app.delete("/api/reports/all")
+async def delete_all_reports():
+    """모든 신고 삭제 (관리자용)"""
+    try:
+        conn = sqlite3.connect('reports.db')
+        cursor = conn.cursor()
+        
+        # 삭제할 신고 수 확인
+        cursor.execute('SELECT COUNT(*) FROM reports')
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            conn.close()
+            return {"message": "삭제할 신고가 없습니다."}
+        
+        # 모든 신고 삭제
+        cursor.execute('DELETE FROM reports')
+        
+        conn.commit()
+        conn.close()
+        
+        return {"message": f"총 {count}개의 신고가 성공적으로 삭제되었습니다."}
+        
+    except Exception as e:
+        logger.error(f"전체 신고 삭제 오류: {e}")
+        raise HTTPException(status_code=500, detail=f"전체 신고 삭제 실패: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
